@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import type { Root } from "hast";
+import type { Element, Root, RootContent } from "hast";
 import type {
   GlobalConfiguration,
   QuartzEmitterPlugin,
@@ -25,8 +25,16 @@ export type ContentDetails = {
   tags: string[];
   content: string;
   richContent?: string;
+  headings?: HeadingDetails[];
   date?: Date;
   description?: string;
+};
+
+/** A heading of a page, as search can link to it: `slug` is its element's id. */
+export type HeadingDetails = {
+  text: string;
+  slug: string;
+  depth: number;
 };
 
 interface Options {
@@ -36,6 +44,7 @@ interface Options {
   rssFullHtml: boolean;
   rssSlug: string;
   includeEmptyFiles: boolean;
+  includeHeadings: boolean;
   rssRecentNotesText?: string;
   rssLastFewNotesText?: (count: number) => string;
 }
@@ -47,6 +56,7 @@ const defaultOptions: Options = {
   rssFullHtml: false,
   rssSlug: "index",
   includeEmptyFiles: true,
+  includeHeadings: false,
   rssRecentNotesText: "Recent notes",
   rssLastFewNotesText: (count) => `Last ${count} notes`,
 };
@@ -128,6 +138,37 @@ function generateRSSFeed(
   </rss>`;
 }
 
+const headingTag = /^h([1-6])$/;
+
+/** The text of a node and everything inside it. */
+function textOf(node: Root | RootContent): string {
+  if (node.type === "text") return node.value;
+  if ("children" in node) return node.children.map(textOf).join("");
+  return "";
+}
+
+/**
+ * Each heading of `tree` that has an id to link to, in document order. A
+ * heading nested in another element, such as a callout, is included too.
+ */
+function collectHeadings(tree: Root): HeadingDetails[] {
+  const headings: HeadingDetails[] = [];
+  const visit = (node: Root | RootContent) => {
+    if (node.type === "element") {
+      const match = headingTag.exec((node as Element).tagName);
+      const id = (node as Element).properties?.id;
+      if (match && typeof id === "string" && id !== "") {
+        const text = textOf(node).trim();
+        if (text !== "") headings.push({ text, slug: id, depth: Number(match[1]) });
+        return;
+      }
+    }
+    if ("children" in node) node.children.forEach(visit);
+  };
+  visit(tree);
+  return headings;
+}
+
 export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
   const options = { ...defaultOptions, ...opts };
   const emitAll = async (ctx: BuildCtx, content: ProcessedContent[]): Promise<FilePath[]> => {
@@ -153,6 +194,8 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
             options.rssFullHtml && !isEncrypted
               ? escapeHTML(toHtml(tree as Root, { allowDangerousHtml: true }))
               : undefined,
+          headings:
+            options.includeHeadings && !isEncrypted ? collectHeadings(tree as Root) : undefined,
           date: date,
           description: (data.description as string | undefined) ?? "",
         });

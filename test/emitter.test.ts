@@ -48,6 +48,7 @@ interface PageOptions {
   links?: string[];
   unlisted?: boolean;
   encrypted?: boolean;
+  body?: Element[];
 }
 
 function createPage(opts: PageOptions): ProcessedContent {
@@ -58,7 +59,7 @@ function createPage(opts: PageOptions): ProcessedContent {
         type: "element",
         tagName: "article",
         properties: {},
-        children: [
+        children: opts.body ?? [
           {
             type: "element",
             tagName: "p",
@@ -86,6 +87,22 @@ function createPage(opts: PageOptions): ProcessedContent {
   vfile.data = data;
   return [tree, vfile];
 }
+
+function element(tagName: string, id: string | undefined, children: Element["children"]): Element {
+  return { type: "element", tagName, properties: id ? { id } : {}, children };
+}
+
+const headedBody = [
+  element("h2", "setup", [{ type: "text", value: "Setup" }]),
+  element("p", undefined, [{ type: "text", value: "text" }]),
+  element("blockquote", undefined, [
+    element("h3", "in-a-callout", [
+      { type: "text", value: "In a " },
+      element("code", undefined, [{ type: "text", value: "callout" }]),
+    ]),
+  ]),
+  element("h4", undefined, [{ type: "text", value: "No id" }]),
+];
 
 async function readJson<T>(filePath: string): Promise<T> {
   const raw = await fs.readFile(filePath, "utf8");
@@ -186,5 +203,41 @@ describe("ContentIndex emitter", () => {
     );
     expect(index["encrypted-visible"]).toBeDefined();
     expect(index["encrypted-visible"]!.title).toBe("Locked");
+  });
+
+  it("lists each page's headings when includeHeadings is on", async () => {
+    const emitter = ContentIndex({ includeHeadings: true });
+    const content: ProcessedContent[] = [createPage({ slug: "page", body: headedBody })];
+    await emitter.emit(createCtx(outputDir), content, createResources());
+
+    const index = await readJson<Record<string, { headings?: unknown }>>(
+      path.join(outputDir, "static", "contentIndex.json"),
+    );
+    expect(index["page"]!.headings).toEqual([
+      { text: "Setup", slug: "setup", depth: 2 },
+      { text: "In a callout", slug: "in-a-callout", depth: 3 },
+    ]);
+  });
+
+  it("leaves headings out by default, and for encrypted pages", async () => {
+    const content: ProcessedContent[] = [
+      createPage({ slug: "page", body: headedBody }),
+      createPage({ slug: "secret", body: headedBody, encrypted: true }),
+    ];
+    await ContentIndex().emit(createCtx(outputDir), content.slice(0, 1), createResources());
+    const plain = await readJson<Record<string, { headings?: unknown }>>(
+      path.join(outputDir, "static", "contentIndex.json"),
+    );
+    expect(plain["page"]!.headings).toBeUndefined();
+
+    await ContentIndex({ includeHeadings: true }).emit(
+      createCtx(outputDir),
+      content.slice(1),
+      createResources(),
+    );
+    const encrypted = await readJson<Record<string, { headings?: unknown }>>(
+      path.join(outputDir, "static", "contentIndex.json"),
+    );
+    expect(encrypted["secret"]!.headings).toBeUndefined();
   });
 });

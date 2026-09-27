@@ -89,7 +89,8 @@
       "rssLimit": 10,
       "rssFullHtml": false,
       "rssSlug": "index",
-      "includeEmptyFiles": true
+      "includeEmptyFiles": true,
+      "includeHeadings": false
     },
     "optionSchema": {
       "enableSiteMap": {
@@ -108,6 +109,9 @@
         "type": "string"
       },
       "includeEmptyFiles": {
+        "type": "boolean"
+      },
+      "includeHeadings": {
         "type": "boolean"
       }
     }

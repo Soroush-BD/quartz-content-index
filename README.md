@@ -31,19 +31,21 @@ ExternalPlugin.ContentIndex({
   rssFullHtml: false,
   rssSlug: "index",
   includeEmptyFiles: true,
+  includeHeadings: false,
 });
 ```
 
 ## Configuration
 
-| Option              | Type      | Default   | Description                                           |
-| ------------------- | --------- | --------- | ----------------------------------------------------- |
-| `enableSiteMap`     | `boolean` | `true`    | Whether to generate a sitemap.xml file.               |
-| `enableRSS`         | `boolean` | `true`    | Whether to generate an RSS feed.                      |
-| `rssLimit`          | `number`  | `10`      | Maximum number of items to include in the RSS feed.   |
-| `rssFullHtml`       | `boolean` | `false`   | Whether to include full HTML content in the RSS feed. |
-| `rssSlug`           | `string`  | `"index"` | The slug for the RSS feed file.                       |
-| `includeEmptyFiles` | `boolean` | `true`    | Whether to include empty files in the content index.  |
+| Option              | Type      | Default   | Description                                                                         |
+| ------------------- | --------- | --------- | ----------------------------------------------------------------------------------- |
+| `enableSiteMap`     | `boolean` | `true`    | Whether to generate a sitemap.xml file.                                             |
+| `enableRSS`         | `boolean` | `true`    | Whether to generate an RSS feed.                                                    |
+| `rssLimit`          | `number`  | `10`      | Maximum number of items to include in the RSS feed.                                 |
+| `rssFullHtml`       | `boolean` | `false`   | Whether to include full HTML content in the RSS feed.                               |
+| `rssSlug`           | `string`  | `"index"` | The slug for the RSS feed file.                                                     |
+| `includeEmptyFiles` | `boolean` | `true`    | Whether to include empty files in the content index.                                |
+| `includeHeadings`   | `boolean` | `false`   | Whether to list each page's headings in the content index, so search can find them. |
 
 ## Documentation
 
